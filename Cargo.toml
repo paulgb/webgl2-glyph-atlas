@@ -1,0 +1,32 @@
+[package]
+name = "webgl2-glyph-atlas"
+version = "0.1.0"
+authors = ["Paul Butler <paulgb@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bytemuck = { version = "1.5.1", features = ["derive"] }
+js-sys = { git="https://github.com/rustwasm/wasm-bindgen.git" }
+wasm-bindgen = { git="https://github.com/rustwasm/wasm-bindgen.git" }
+web-sys = { git="https://github.com/rustwasm/wasm-bindgen.git", features = [
+  'console',
+  'CanvasRenderingContext2d',
+  'Document',
+  'Element',
+  'HtmlCanvasElement',
+  'ImageBitmap',
+  'ImageData',
+  'TextMetrics',
+  'WebGlBuffer',
+  'WebGl2RenderingContext',
+  'WebGlVertexArrayObject',
+  'WebGlUniformLocation',
+  'WebGlProgram',
+  'WebGlShader',
+  'WebGlTexture',
+  'WebGlSync',
+  'Window',
+] }
+
