@@ -20,11 +20,12 @@ jobs:
     - name: Build demos
       run: |
         mkdir dist
-        for DEMO_DIR in $(ls demos)
+        cd demos
+        for DEMO_DIR in $(ls)
         do
-          cd $DEMO_DIR
+          cd "${DEMO_DIR}"
           trunk build
-          mv dist "../dist/${DEMO_DIR}"
+          mv dist "../../dist/${DEMO_DIR}"
           cd ../
         done
     - name: Deploy 🚀
