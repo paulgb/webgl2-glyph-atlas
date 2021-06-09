@@ -17,6 +17,8 @@ jobs:
       run: cargo build
     - name: Install Trunk
       run: cargo install trunk
+    - name: Install wasm-pack
+      run: cargo install wasm-pack
     - name: Build demos
       run: |
         mkdir dist
