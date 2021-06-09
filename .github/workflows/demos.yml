@@ -30,7 +30,7 @@ jobs:
         for DEMO_DIR in $(ls)
         do
           cd "${DEMO_DIR}"
-          trunk build --public-url="/${DEMO_DIR}/"
+          trunk build --public-url="/webgl2-glyph-atlas/${DEMO_DIR}/"
           mv dist "../../dist/${DEMO_DIR}"
           cd ../
         done
