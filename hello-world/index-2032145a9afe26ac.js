@@ -219,7 +219,7 @@ async function load(module, imports) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('index-2e3039b0570defe6_bg.wasm', import.meta.url);
+        input = new URL('index-2032145a9afe26ac_bg.wasm', import.meta.url);
     }
     const imports = {};
     imports.wbg = {};
@@ -243,6 +243,9 @@ async function init(input) {
     };
     imports.wbg.__wbg_texImage2D_f2f58bd19976549f = function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6) {
         getObject(arg0).texImage2D(arg1 >>> 0, arg2, arg3, arg4 >>> 0, arg5 >>> 0, getObject(arg6));
+    }, arguments) };
+    imports.wbg.__wbg_texSubImage2D_3a0027af186b1921 = function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+        getObject(arg0).texSubImage2D(arg1 >>> 0, arg2, arg3, arg4, arg5 >>> 0, arg6 >>> 0, getObject(arg7));
     }, arguments) };
     imports.wbg.__wbg_vertexAttribDivisor_520ef0dca9f7f41a = function(arg0, arg1, arg2) {
         getObject(arg0).vertexAttribDivisor(arg1 >>> 0, arg2 >>> 0);
