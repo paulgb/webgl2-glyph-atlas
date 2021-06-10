@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{WebGl2RenderingContext};
+use web_sys::WebGl2RenderingContext;
 
 use webgl2_glyph_atlas::{Font, Renderer};
 

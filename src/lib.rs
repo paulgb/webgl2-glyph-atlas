@@ -1,4 +1,4 @@
-use web_sys::{WebGl2RenderingContext, WebGlProgram};
+use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlTexture};
 
 use crate::glyph_atlas::GlyphAtlas;
 use crate::shader::{compile_shader, link_program};
@@ -20,6 +20,7 @@ pub struct Renderer<'a> {
     program: WebGlProgram,
     atlas: GlyphAtlas,
     queued_text: Vec<(String, Font, u32, u32)>, // TODO: Use FontIndex, not Font
+    texture: WebGlTexture,
 }
 
 impl<'a> Renderer<'a> {
@@ -42,15 +43,30 @@ impl<'a> Renderer<'a> {
 
         let program = link_program(gl, &vert_shader, &frag_shader).unwrap();
         let atlas = GlyphAtlas::new();
+        let texture = gl.create_texture().unwrap();
 
-        Renderer { gl, program, atlas,queued_text: Vec::new() }
+        gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture));
+        gl.tex_image_2d_with_u32_and_u32_and_image_data(
+            WebGl2RenderingContext::TEXTURE_2D,    // target
+            0,                                     // level
+            WebGl2RenderingContext::RGBA as i32,   // internalformat
+            WebGl2RenderingContext::RGBA,          // format
+            WebGl2RenderingContext::UNSIGNED_BYTE, // type
+            &atlas.image_data(),                   // data
+        ).unwrap();
+
+        Renderer {
+            gl,
+            program,
+            atlas,
+            queued_text: Vec::new(),
+            texture,
+        }
     }
 
     fn bind_texture(&mut self) {
-        let texture = self.gl.create_texture().unwrap();
-
         self.gl
-            .bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture));
+            .bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&self.texture));
 
         self.gl.tex_parameteri(
             WebGl2RenderingContext::TEXTURE_2D,
@@ -72,31 +88,39 @@ impl<'a> Renderer<'a> {
             WebGl2RenderingContext::TEXTURE_MAG_FILTER,
             WebGl2RenderingContext::NEAREST as i32,
         );
-
-        self.gl
-            .tex_image_2d_with_u32_and_u32_and_image_data(
-                WebGl2RenderingContext::TEXTURE_2D,    // target
-                0,                                     // level
-                WebGl2RenderingContext::RGBA as i32,   // internalformat
-                WebGl2RenderingContext::RGBA,          // format
-                WebGl2RenderingContext::UNSIGNED_BYTE, // type
-                &self.atlas.image_data(),              // data
-            )
-            .unwrap();
     }
 
     pub fn queue_text(&mut self, text: &str, font: &Font, x: u32, y: u32) {
-        self.queued_text.push((text.to_string(), font.clone(), x, y));
+        self.queued_text
+            .push((text.to_string(), font.clone(), x, y));
     }
 
     pub fn draw(&mut self) {
         let width = self.gl.drawing_buffer_width() as f32;
         let height = self.gl.drawing_buffer_height() as f32;
 
-        self.atlas.prepare_text(self.queued_text.iter().map(|(text, font, _, _)| (text.as_str(), font)).collect());
-
         self.gl.use_program(Some(&self.program));
-        self.bind_texture(); // TODO: only if dirty.
+        self.bind_texture();
+
+        let need_to_update_texture = self.atlas.prepare_text(
+            self.queued_text
+                .iter()
+                .map(|(text, font, _, _)| (text.as_str(), font))
+                .collect(),
+        );
+        if need_to_update_texture {
+            self.gl
+                .tex_sub_image_2d_with_u32_and_u32_and_image_data(
+                    WebGl2RenderingContext::TEXTURE_2D,    // target
+                    0,                                     // level
+                    0,                                     // xoffset
+                    0,                                     // yoffset
+                    WebGl2RenderingContext::RGBA,          // format
+                    WebGl2RenderingContext::UNSIGNED_BYTE, // type
+                    &self.atlas.image_data(),              // data
+                )
+                .unwrap();
+        }
 
         let mut blits: Vec<BlitArea> = Vec::new(); // TODO: use with_capacity
 

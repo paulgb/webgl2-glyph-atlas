@@ -66,7 +66,6 @@ impl GlyphAtlas {
                 "height: 512px; width: 512px; image-rendering: pixelated",
             )
             .unwrap();
-
         document.body().unwrap().append_child(&canvas).unwrap();
          */
 
@@ -106,7 +105,7 @@ impl GlyphAtlas {
         }
     }
 
-    pub fn prepare_text(&mut self, strings: Vec<(&str, &Font)>) {
+    pub fn prepare_text(&mut self, strings: Vec<(&str, &Font)>) -> bool {
         let mut needed: HashMap<GlyphSpec, GlyphShape> = HashMap::new();
 
         for (text, font) in strings {
@@ -128,6 +127,11 @@ impl GlyphAtlas {
         }
 
         let mut needed: Vec<(GlyphSpec, GlyphShape)> = needed.into_iter().collect();
+
+        if needed.len() == 0 {
+            return false;
+        }
+
         needed.sort_by(|(_, s1), (_, s2)| s2.size().area().cmp(&s1.size().area()));
 
         for (GlyphSpec(ch, font_id), glyph_shape) in needed.into_iter() {
@@ -143,17 +147,15 @@ impl GlyphAtlas {
 
                 self.canvas_context.save();
 
-                self.canvas_context.set_font(&self.fonts[font_id].as_canvas_string());
+                self.canvas_context
+                    .set_font(&self.fonts[font_id].as_canvas_string());
 
-                self.canvas_context.rect(x as f64, y as f64, size.width as f64, size.height as f64);
+                self.canvas_context
+                    .rect(x as f64, y as f64, size.width as f64, size.height as f64);
                 self.canvas_context.clip();
 
                 self.canvas_context
-                    .fill_text(
-                        &ch.to_string(),
-                        x as f64,
-                        (y + glyph_shape.ascent) as f64,
-                    )
+                    .fill_text(&ch.to_string(), x as f64, (y + glyph_shape.ascent) as f64)
                     .unwrap();
 
                 self.canvas_context.restore();
@@ -167,6 +169,8 @@ impl GlyphAtlas {
                 );
             }
         }
+
+        true
     }
 
     pub fn get_entry(&self, c: char, font: &Font) -> &AtlasEntry {
