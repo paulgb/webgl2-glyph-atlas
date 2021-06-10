@@ -19,9 +19,9 @@ pub fn main() -> Result<(), JsValue> {
     gl.clear_color(1.0, 1.0, 1.0, 1.0);
     gl.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
 
-    renderer.render_text("Hello world...", &Font::new("Georgia", 10), 40, 120);
-    renderer.render_text("Hello, world! 😮", &Font::new("Arial", 30), 10, 10);
-    renderer.render_text("Hello, world", &Font::new("Helvetica", 43), 10, 200);
+    renderer.render_text("Hello world ", &Font::new("Georgia", 10), 40, 120);
+    renderer.render_text("Hello, world! 🌎", &Font::new("Arial", 30), 10, 200);
+    renderer.render_text("こんにちは世界", &Font::new("Helvetica", 25), 10, 10);
 
     Ok(())
 }

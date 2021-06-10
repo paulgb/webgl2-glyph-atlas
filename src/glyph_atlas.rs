@@ -130,6 +130,11 @@ impl GlyphAtlas {
                 self.canvas_context.stroke_rect(x as f64 + 0.5, y as f64 + 0.5, size.width as f64 - 1.0, size.height as f64 - 1.0);
                  */
 
+                self.canvas_context.save();
+
+                self.canvas_context.rect(x as f64, y as f64, size.width as f64, size.height as f64);
+                self.canvas_context.clip();
+
                 self.canvas_context
                     .fill_text(
                         &ch.to_string(),
@@ -137,6 +142,8 @@ impl GlyphAtlas {
                         (y + glyph_shape.ascent) as f64,
                     )
                     .unwrap();
+
+                self.canvas_context.restore();
 
                 self.characters.insert(
                     GlyphSpec(ch, font_id),
