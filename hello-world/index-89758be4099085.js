@@ -219,7 +219,7 @@ async function load(module, imports) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('index-9cd0ef3c9870c7a2_bg.wasm', import.meta.url);
+        input = new URL('index-89758be4099085_bg.wasm', import.meta.url);
     }
     const imports = {};
     imports.wbg = {};
@@ -377,10 +377,22 @@ async function init(input) {
     imports.wbg.__wbg_setfont_0ad3a6749ddee168 = function(arg0, arg1, arg2) {
         getObject(arg0).font = getStringFromWasm0(arg1, arg2);
     };
+    imports.wbg.__wbg_clip_aca2c0a64db5f5ed = function(arg0) {
+        getObject(arg0).clip();
+    };
     imports.wbg.__wbg_getImageData_b5842f1d6ce40388 = function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
         var ret = getObject(arg0).getImageData(arg1, arg2, arg3, arg4);
         return addHeapObject(ret);
     }, arguments) };
+    imports.wbg.__wbg_rect_df5c282417c75c3e = function(arg0, arg1, arg2, arg3, arg4) {
+        getObject(arg0).rect(arg1, arg2, arg3, arg4);
+    };
+    imports.wbg.__wbg_restore_544014131c1efb4a = function(arg0) {
+        getObject(arg0).restore();
+    };
+    imports.wbg.__wbg_save_a36632e08be03836 = function(arg0) {
+        getObject(arg0).save();
+    };
     imports.wbg.__wbg_fillText_ca163c7a12c0c43d = function() { return handleError(function (arg0, arg1, arg2, arg3, arg4) {
         getObject(arg0).fillText(getStringFromWasm0(arg1, arg2), arg3, arg4);
     }, arguments) };
