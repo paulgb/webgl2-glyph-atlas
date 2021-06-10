@@ -7,7 +7,7 @@ const TEXTURE_SIZE: u32 = 256;
 use crate::packing::{PackingNode, RectSize};
 use crate::Font;
 
-type FontIndex = u8;
+pub type FontIndex = usize;
 
 #[derive(Eq, PartialEq, Hash)]
 struct GlyphSpec(pub char, pub FontIndex);
@@ -36,7 +36,8 @@ impl AtlasEntry {
 pub struct GlyphAtlas {
     packing: PackingNode,
     canvas_context: CanvasRenderingContext2d,
-    fonts: HashMap<Font, FontIndex>,
+    font_to_index: HashMap<Font, FontIndex>,
+    fonts: Vec<Font>, // TODO: ugh
     characters: HashMap<GlyphSpec, AtlasEntry>,
 }
 
@@ -82,7 +83,8 @@ impl GlyphAtlas {
             canvas_context,
             packing,
             characters: HashMap::default(),
-            fonts: HashMap::new(),
+            font_to_index: HashMap::new(),
+            fonts: Vec::new(),
         }
     }
 
@@ -92,27 +94,36 @@ impl GlyphAtlas {
             .unwrap()
     }
 
-    fn font_to_index(&mut self, font: &Font) -> u8 {
-        let len = self.fonts.len() as u8;
-        *self.fonts.entry(font.clone()).or_insert(len)
+    fn font_to_index(&mut self, font: &Font) -> usize {
+        if let Some(index) = self.font_to_index.get(&font) {
+            *index
+        } else {
+            let len = self.fonts.len();
+            self.fonts.push(font.clone());
+            self.font_to_index.insert(font.clone(), len);
+
+            len
+        }
     }
 
-    pub fn prepare_text(&mut self, text: &str, font: &Font) {
-        self.canvas_context.set_font(&font.as_canvas_string());
-
-        let font_idx = self.font_to_index(font);
-
+    pub fn prepare_text(&mut self, strings: Vec<(&str, &Font)>) {
         let mut needed: HashMap<GlyphSpec, GlyphShape> = HashMap::new();
 
-        for ch in text.chars() {
-            let key = GlyphSpec(ch, font_idx);
-            if !self.characters.contains_key(&key) && !needed.contains_key(&key) {
-                let st: String = ch.to_string();
-                let metrics: TextMetrics = self.canvas_context.measure_text(&st).unwrap();
+        for (text, font) in strings {
+            self.canvas_context.set_font(&font.as_canvas_string());
 
-                let glyph_shape = GlyphShape::from_text_metrics(&metrics);
+            let font_idx = self.font_to_index(font);
 
-                needed.insert(key, glyph_shape);
+            for ch in text.chars() {
+                let key = GlyphSpec(ch, font_idx);
+                if !self.characters.contains_key(&key) && !needed.contains_key(&key) {
+                    let st: String = ch.to_string();
+                    let metrics: TextMetrics = self.canvas_context.measure_text(&st).unwrap();
+
+                    let glyph_shape = GlyphShape::from_text_metrics(&metrics);
+
+                    needed.insert(key, glyph_shape);
+                }
             }
         }
 
@@ -131,6 +142,8 @@ impl GlyphAtlas {
                  */
 
                 self.canvas_context.save();
+
+                self.canvas_context.set_font(&self.fonts[font_id].as_canvas_string());
 
                 self.canvas_context.rect(x as f64, y as f64, size.width as f64, size.height as f64);
                 self.canvas_context.clip();
@@ -157,7 +170,7 @@ impl GlyphAtlas {
     }
 
     pub fn get_entry(&self, c: char, font: &Font) -> &AtlasEntry {
-        let font_idx: FontIndex = *self.fonts.get(font).unwrap();
+        let font_idx: FontIndex = *self.font_to_index.get(font).unwrap();
         self.characters.get(&GlyphSpec(c, font_idx)).unwrap()
     }
 }

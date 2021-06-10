@@ -19,6 +19,7 @@ pub struct Renderer<'a> {
     gl: &'a WebGl2RenderingContext,
     program: WebGlProgram,
     atlas: GlyphAtlas,
+    queued_text: Vec<(String, Font, u32, u32)>, // TODO: Use FontIndex, not Font
 }
 
 impl<'a> Renderer<'a> {
@@ -42,7 +43,7 @@ impl<'a> Renderer<'a> {
         let program = link_program(gl, &vert_shader, &frag_shader).unwrap();
         let atlas = GlyphAtlas::new();
 
-        Renderer { gl, program, atlas }
+        Renderer { gl, program, atlas,queued_text: Vec::new() }
     }
 
     fn bind_texture(&mut self) {
@@ -84,52 +85,58 @@ impl<'a> Renderer<'a> {
             .unwrap();
     }
 
-    pub fn render_text(&mut self, text: &str, font: &Font, x: u32, y: u32) {
+    pub fn queue_text(&mut self, text: &str, font: &Font, x: u32, y: u32) {
+        self.queued_text.push((text.to_string(), font.clone(), x, y));
+    }
+
+    pub fn draw(&mut self) {
         let width = self.gl.drawing_buffer_width() as f32;
         let height = self.gl.drawing_buffer_height() as f32;
 
-        self.atlas.prepare_text(text, font);
+        self.atlas.prepare_text(self.queued_text.iter().map(|(text, font, _, _)| (text.as_str(), font)).collect());
 
         self.gl.use_program(Some(&self.program));
-        self.bind_texture();
+        self.bind_texture(); // TODO: only if dirty.
 
-        let chars: Vec<char> = text.chars().collect();
-        let mut blits: Vec<BlitArea> = Vec::with_capacity(chars.len());
+        let mut blits: Vec<BlitArea> = Vec::new(); // TODO: use with_capacity
 
         let x_scale = 2. / width;
         let y_scale = 2. / height;
         let x_offset = -1.;
         let y_offset = -1.;
 
-        let mut x: f32 = x as f32;
+        for (text, font, x, y) in &self.queued_text {
+            let chars: Vec<char> = text.chars().collect();
+            let mut x: f32 = *x as f32;
 
-        for ch in chars {
-            let entry = self.atlas.get_entry(ch, font);
+            for ch in chars {
+                let entry = self.atlas.get_entry(ch, font);
 
-            let (tex_upper_left, tex_lower_right) = entry.texture_scaled_bounds();
+                let (tex_upper_left, tex_lower_right) = entry.texture_scaled_bounds();
 
-            let glyph_width = entry.glyph_shape.glyph_width();
-            let glyph_height = entry.glyph_shape.height();
-            let glyph_offset = entry.glyph_shape.descent;
+                let glyph_width = entry.glyph_shape.glyph_width();
+                let glyph_height = entry.glyph_shape.height();
+                let glyph_offset = entry.glyph_shape.descent;
 
-            let blit_upper_left = [
-                (x.round() as f32 * x_scale) + x_offset,
-                ((y - glyph_offset + glyph_height) as f32 * y_scale) + y_offset,
-            ];
+                let blit_upper_left = [
+                    (x.round() as f32 * x_scale) + x_offset,
+                    ((y - glyph_offset + glyph_height) as f32 * y_scale) + y_offset,
+                ];
 
-            let blit_lower_right = [
-                ((x.round() + glyph_width as f32) * x_scale) + x_offset,
-                ((y - glyph_offset) as f32 * y_scale) + y_offset,
-            ];
+                let blit_lower_right = [
+                    ((x.round() + glyph_width as f32) * x_scale) + x_offset,
+                    ((y - glyph_offset) as f32 * y_scale) + y_offset,
+                ];
 
-            blits.push(BlitArea {
-                lower_right: blit_lower_right,
-                upper_left: blit_upper_left,
-                tex_upper_left,
-                tex_lower_right,
-            });
+                blits.push(BlitArea {
+                    lower_right: blit_lower_right,
+                    upper_left: blit_upper_left,
+                    tex_upper_left,
+                    tex_lower_right,
+                });
 
-            x += entry.glyph_shape.occupied_width;
+                x += entry.glyph_shape.occupied_width;
+            }
         }
 
         let buffer = self.gl.create_buffer().unwrap();
