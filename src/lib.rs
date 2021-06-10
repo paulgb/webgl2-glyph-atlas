@@ -105,12 +105,12 @@ impl<'a> Renderer<'a> {
         let x_offset = -1.;
         let y_offset = -1.;
 
-        for (text, font, x, y) in &self.queued_text {
+        for (text, font, x, y) in self.queued_text.drain(..) {
             let chars: Vec<char> = text.chars().collect();
-            let mut x: f32 = *x as f32;
+            let mut x: f32 = x as f32;
 
             for ch in chars {
-                let entry = self.atlas.get_entry(ch, font);
+                let entry = self.atlas.get_entry(ch, &font);
 
                 let (tex_upper_left, tex_lower_right) = entry.texture_scaled_bounds();
 
