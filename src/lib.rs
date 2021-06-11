@@ -1,4 +1,4 @@
-use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlTexture};
+use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlTexture, WebGlBuffer};
 
 use crate::glyph_atlas::GlyphAtlas;
 use crate::shader::{compile_shader, link_program};
@@ -19,8 +19,9 @@ pub struct Renderer<'a> {
     gl: &'a WebGl2RenderingContext,
     program: WebGlProgram,
     atlas: GlyphAtlas,
-    queued_text: Vec<(String, Font, u32, u32)>, // TODO: Use FontIndex, not Font
+    queued_text: Vec<(String, Font, f32, f32)>, // TODO: Use FontIndex, not Font
     texture: WebGlTexture,
+    buffer: WebGlBuffer,
 }
 
 impl<'a> Renderer<'a> {
@@ -55,12 +56,15 @@ impl<'a> Renderer<'a> {
             &atlas.image_data(),                   // data
         ).unwrap();
 
+        let buffer = gl.create_buffer().unwrap();
+
         Renderer {
             gl,
             program,
             atlas,
             queued_text: Vec::new(),
             texture,
+            buffer,
         }
     }
 
@@ -90,7 +94,7 @@ impl<'a> Renderer<'a> {
         );
     }
 
-    pub fn queue_text(&mut self, text: &str, font: &Font, x: u32, y: u32) {
+    pub fn queue_text(&mut self, text: &str, font: &Font, x: f32, y: f32) {
         self.queued_text
             .push((text.to_string(), font.clone(), x, y));
     }
@@ -108,6 +112,7 @@ impl<'a> Renderer<'a> {
                 .map(|(text, font, _, _)| (text.as_str(), font))
                 .collect(),
         );
+
         if need_to_update_texture {
             self.gl
                 .tex_sub_image_2d_with_u32_and_u32_and_image_data(
@@ -144,12 +149,11 @@ impl<'a> Renderer<'a> {
 
                 let blit_upper_left = [
                     (x.round() as f32 * x_scale) + x_offset,
-                    ((y - glyph_offset + glyph_height) as f32 * y_scale) + y_offset,
+                    ((y - glyph_offset as f32 + glyph_height as f32) * y_scale) + y_offset,
                 ];
-
                 let blit_lower_right = [
                     ((x.round() + glyph_width as f32) * x_scale) + x_offset,
-                    ((y - glyph_offset) as f32 * y_scale) + y_offset,
+                    ((y - glyph_offset as f32) * y_scale) + y_offset,
                 ];
 
                 blits.push(BlitArea {
@@ -163,23 +167,26 @@ impl<'a> Renderer<'a> {
             }
         }
 
-        let buffer = self.gl.create_buffer().unwrap();
         self.gl
-            .bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&buffer));
+            .bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&self.buffer));
 
-        unsafe {
-            let vert_array = js_sys::Float32Array::view(&bytemuck::cast_slice(&blits));
 
-            self.gl.buffer_data_with_array_buffer_view(
-                WebGl2RenderingContext::ARRAY_BUFFER,
-                &vert_array,
-                WebGl2RenderingContext::STATIC_DRAW,
-            );
-        }
+            unsafe {
+                let vert_array = js_sys::Float32Array::view(&bytemuck::cast_slice(&blits));
+
+                self.gl.buffer_data_with_array_buffer_view(
+                    WebGl2RenderingContext::ARRAY_BUFFER,
+                    &vert_array,
+                    WebGl2RenderingContext::DYNAMIC_DRAW,
+                );
+            }
+
 
         BlitArea::describe(self.gl, &self.program);
+
+
         self.gl
-            .draw_arrays_instanced(WebGl2RenderingContext::TRIANGLES, 0, 6, blits.len() as i32);
+            .draw_arrays_instanced(WebGl2RenderingContext::TRIANGLES, 0, 6, 12);
 
         self.gl.finish();
     }
