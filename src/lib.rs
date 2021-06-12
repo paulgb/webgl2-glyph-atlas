@@ -22,6 +22,7 @@ pub struct Renderer<'a> {
     queued_text: Vec<(String, Font, f32, f32)>, // TODO: Use FontIndex, not Font
     texture: WebGlTexture,
     buffer: WebGlBuffer,
+    blits: Vec<BlitArea>,
 }
 
 impl<'a> Renderer<'a> {
@@ -57,6 +58,7 @@ impl<'a> Renderer<'a> {
         ).unwrap();
 
         let buffer = gl.create_buffer().unwrap();
+        let blits = Vec::new();
 
         Renderer {
             gl,
@@ -65,6 +67,7 @@ impl<'a> Renderer<'a> {
             queued_text: Vec::new(),
             texture,
             buffer,
+            blits,
         }
     }
 
@@ -100,6 +103,7 @@ impl<'a> Renderer<'a> {
     }
 
     pub fn draw(&mut self) {
+        self.blits.clear();
         let width = self.gl.drawing_buffer_width() as f32;
         let height = self.gl.drawing_buffer_height() as f32;
 
@@ -127,8 +131,6 @@ impl<'a> Renderer<'a> {
                 .unwrap();
         }
 
-        let mut blits: Vec<BlitArea> = Vec::new(); // TODO: use with_capacity
-
         let x_scale = 2. / width;
         let y_scale = 2. / height;
         let x_offset = -1.;
@@ -136,7 +138,7 @@ impl<'a> Renderer<'a> {
 
         for (text, font, x, y) in self.queued_text.drain(..) {
             let chars: Vec<char> = text.chars().collect();
-            let mut x: f32 = x as f32;
+            let mut x = x;
 
             for ch in chars {
                 let entry = self.atlas.get_entry(ch, &font);
@@ -148,7 +150,7 @@ impl<'a> Renderer<'a> {
                 let glyph_offset = entry.glyph_shape.descent;
 
                 let blit_upper_left = [
-                    (x.round() as f32 * x_scale) + x_offset,
+                    (x.round() * x_scale) + x_offset,
                     ((y - glyph_offset as f32 + glyph_height as f32) * y_scale) + y_offset,
                 ];
                 let blit_lower_right = [
@@ -156,7 +158,7 @@ impl<'a> Renderer<'a> {
                     ((y - glyph_offset as f32) * y_scale) + y_offset,
                 ];
 
-                blits.push(BlitArea {
+                self.blits.push(BlitArea {
                     lower_right: blit_lower_right,
                     upper_left: blit_upper_left,
                     tex_upper_left,
@@ -172,7 +174,7 @@ impl<'a> Renderer<'a> {
 
 
             unsafe {
-                let vert_array = js_sys::Float32Array::view(&bytemuck::cast_slice(&blits));
+                let vert_array = js_sys::Float32Array::view(&bytemuck::cast_slice(&self.blits));
 
                 self.gl.buffer_data_with_array_buffer_view(
                     WebGl2RenderingContext::ARRAY_BUFFER,

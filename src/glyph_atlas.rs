@@ -21,12 +21,12 @@ impl AtlasEntry {
     pub fn texture_scaled_bounds(&self) -> ([f32; 2], [f32; 2]) {
         let upper_left = [
             self.upper_left[0] as f32 / TEXTURE_SIZE as f32,
-            self.upper_left[1] as f32 / TEXTURE_SIZE as f32,
+            (self.upper_left[1] as f32 + 0.5) / TEXTURE_SIZE as f32,
         ];
 
         let lower_right = [
             (self.upper_left[0] + self.glyph_shape.glyph_width()) as f32 / TEXTURE_SIZE as f32,
-            (self.upper_left[1] + self.glyph_shape.height()) as f32 / TEXTURE_SIZE as f32,
+            ((self.upper_left[1] + self.glyph_shape.height()) as f32 + 0.5) / TEXTURE_SIZE as f32,
         ];
 
         (upper_left, lower_right)
@@ -39,6 +39,7 @@ pub struct GlyphAtlas {
     font_to_index: HashMap<Font, FontIndex>,
     fonts: Vec<Font>, // TODO: ugh
     characters: HashMap<GlyphSpec, AtlasEntry>,
+    needed: HashMap<GlyphSpec, GlyphShape>,
 }
 
 impl GlyphAtlas {
@@ -84,6 +85,7 @@ impl GlyphAtlas {
             characters: HashMap::default(),
             font_to_index: HashMap::new(),
             fonts: Vec::new(),
+            needed: Default::default(),
         }
     }
 
@@ -106,8 +108,7 @@ impl GlyphAtlas {
     }
 
     pub fn prepare_text(&mut self, strings: Vec<(&str, &Font)>) -> bool {
-        let mut needed: HashMap<GlyphSpec, GlyphShape> = HashMap::new();
-
+        self.needed.clear();
         for (text, font) in strings {
             self.canvas_context.set_font(&font.as_canvas_string());
 
@@ -115,22 +116,22 @@ impl GlyphAtlas {
 
             for ch in text.chars() {
                 let key = GlyphSpec(ch, font_idx);
-                if !self.characters.contains_key(&key) && !needed.contains_key(&key) {
+                if !self.characters.contains_key(&key) && !self.needed.contains_key(&key) {
                     let st: String = ch.to_string();
                     let metrics: TextMetrics = self.canvas_context.measure_text(&st).unwrap();
 
                     let glyph_shape = GlyphShape::from_text_metrics(&metrics);
 
-                    needed.insert(key, glyph_shape);
+                    self.needed.insert(key, glyph_shape);
                 }
             }
         }
 
-        let mut needed: Vec<(GlyphSpec, GlyphShape)> = needed.into_iter().collect();
-
-        if needed.len() == 0 {
+        if self.needed.len() == 0 {
             return false;
         }
+
+        let mut needed: Vec<(GlyphSpec, GlyphShape)> = self.needed.drain().collect();
 
         needed.sort_by(|(_, s1), (_, s2)| s2.size().area().cmp(&s1.size().area()));
 

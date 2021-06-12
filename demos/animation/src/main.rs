@@ -39,7 +39,7 @@ impl RenderContext {
         //self.gl.clear_color(1.0, 1.0, 1.0, 1.0);
         //self.gl.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
 
-        self.renderer.queue_text("Hello world ", &Font::new("Georgia", 10), 40., 10.);
+        self.renderer.queue_text("Hello world ", &Font::new("Georgia", 10), 40., f);
         self.renderer.draw();
         self.frame += 1;
 
