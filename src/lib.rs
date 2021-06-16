@@ -22,7 +22,7 @@ pub struct Renderer<'a> {
     queued_text: Vec<(String, Font, f32, f32)>, // TODO: Use FontIndex, not Font
     texture: WebGlTexture,
     buffer: WebGlBuffer,
-    blits: Vec<BlitArea>,
+    quads: Vec<BlitQuad>,
 }
 
 impl<'a> Renderer<'a> {
@@ -58,7 +58,7 @@ impl<'a> Renderer<'a> {
         ).unwrap();
 
         let buffer = gl.create_buffer().unwrap();
-        let blits = Vec::new();
+        let quads = Vec::new();
 
         Renderer {
             gl,
@@ -67,7 +67,7 @@ impl<'a> Renderer<'a> {
             queued_text: Vec::new(),
             texture,
             buffer,
-            blits,
+            quads,
         }
     }
 
@@ -103,7 +103,7 @@ impl<'a> Renderer<'a> {
     }
 
     pub fn draw(&mut self) {
-        self.blits.clear();
+        self.quads.clear();
         let width = self.gl.drawing_buffer_width() as f32;
         let height = self.gl.drawing_buffer_height() as f32;
 
@@ -158,12 +158,12 @@ impl<'a> Renderer<'a> {
                     ((y - glyph_offset as f32) * y_scale) + y_offset,
                 ];
 
-                self.blits.push(BlitArea {
-                    lower_right: blit_lower_right,
-                    upper_left: blit_upper_left,
-                    tex_upper_left,
+                self.quads.push(BlitQuad::new(
+                    blit_lower_right,
+                    blit_upper_left,
                     tex_lower_right,
-                });
+                    tex_upper_left,
+                ));
 
                 x += entry.glyph_shape.occupied_width;
             }
@@ -172,9 +172,8 @@ impl<'a> Renderer<'a> {
         self.gl
             .bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&self.buffer));
 
-
             unsafe {
-                let vert_array = js_sys::Float32Array::view(&bytemuck::cast_slice(&self.blits));
+                let vert_array = js_sys::Float32Array::view(&bytemuck::cast_slice(&self.quads));
 
                 self.gl.buffer_data_with_array_buffer_view(
                     WebGl2RenderingContext::ARRAY_BUFFER,
@@ -183,12 +182,10 @@ impl<'a> Renderer<'a> {
                 );
             }
 
-
-        BlitArea::describe(self.gl, &self.program);
-
+        BlitVertex::describe(self.gl, &self.program);
 
         self.gl
-            .draw_arrays_instanced(WebGl2RenderingContext::TRIANGLES, 0, 6, 12);
+            .draw_arrays(WebGl2RenderingContext::TRIANGLES, 0, (self.quads.len() * 6) as i32);
 
         self.gl.finish();
     }
@@ -196,23 +193,63 @@ impl<'a> Renderer<'a> {
 
 #[repr(C)]
 #[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy, Debug)]
-struct BlitArea {
-    pub upper_left: [f32; 2],
-    pub lower_right: [f32; 2],
-    pub tex_upper_left: [f32; 2],
-    pub tex_lower_right: [f32; 2],
+struct BlitQuad {
+    vertices: [BlitVertex; 6],
 }
 
-impl BlitArea {
+impl BlitQuad {
+    pub fn new(upper_left: [f32; 2], lower_right: [f32; 2], tex_upper_left: [f32; 2], tex_lower_right: [f32; 2]) -> BlitQuad {
+        let upper_right = [lower_right[0], upper_left[1]];
+        let lower_left = [upper_left[0], lower_right[1]];
+        let tex_upper_right = [tex_lower_right[0], tex_upper_left[1]];
+        let tex_lower_left = [tex_upper_left[0], tex_lower_right[1]];
+
+        BlitQuad {
+            vertices: [
+                BlitVertex {
+                    position: upper_left,
+                    tex_coord: tex_upper_left
+                },
+                BlitVertex {
+                    position: upper_right,
+                    tex_coord: tex_upper_right
+                },
+                BlitVertex {
+                    position: lower_left,
+                    tex_coord: tex_lower_left
+                },
+                BlitVertex {
+                    position: upper_right,
+                    tex_coord: tex_upper_right
+                },
+                BlitVertex {
+                    position: lower_right,
+                    tex_coord: tex_lower_right
+                },
+                BlitVertex {
+                    position: lower_left,
+                    tex_coord: tex_lower_left
+                },
+            ]
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy, Debug)]
+struct BlitVertex {
+    pub position: [f32; 2],
+    pub tex_coord: [f32; 2],
+}
+
+impl BlitVertex {
     fn describe(gl: &WebGl2RenderingContext, program: &WebGlProgram) {
         let mut offset = 0;
 
         // Binding is simple because each attribute happens to be a [f32; 2].
         for attribute in &[
-            "a_upper_left",
-            "a_lower_right",
-            "a_tex_upper_left",
-            "a_tex_lower_right",
+            "a_position",
+            "a_tex_coord",
         ] {
             let location = gl.get_attrib_location(&program, attribute) as u32;
             gl.vertex_attrib_pointer_with_i32(
@@ -220,11 +257,10 @@ impl BlitArea {
                 2,
                 WebGl2RenderingContext::FLOAT,
                 false,
-                std::mem::size_of::<BlitArea>() as i32,
+                std::mem::size_of::<BlitVertex>() as i32,
                 offset,
             );
             gl.enable_vertex_attrib_array(location);
-            gl.vertex_attrib_divisor(location, 1);
 
             offset += std::mem::size_of::<[f32; 2]>() as i32;
         }

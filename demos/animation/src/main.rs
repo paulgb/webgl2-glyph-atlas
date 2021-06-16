@@ -14,7 +14,7 @@ macro_rules! console_log {
 }
 
 struct RenderContext {
-    gl: &'static WebGl2RenderingContext,
+    _gl: &'static WebGl2RenderingContext,
     renderer: Renderer<'static>,
     frame: u32,
 }
@@ -22,10 +22,10 @@ struct RenderContext {
 impl RenderContext {
     pub fn new(gl: WebGl2RenderingContext) -> RenderContext {
         let gl = Box::leak(Box::new(gl));
-        let mut renderer = Renderer::new(gl);
+        let renderer = Renderer::new(gl);
         
         RenderContext {
-            gl,
+            _gl: gl,
             renderer,
             frame: 0,
         }
@@ -34,12 +34,12 @@ impl RenderContext {
     pub fn render(&mut self) {
         let start_time = web_sys::window().unwrap().performance().unwrap().now();
 
-        let f = ((self.frame as f32 / 5.) % 100.) + 1.;
+        let f = ((self.frame as f32) % 200.) + 1.;
 
         //self.gl.clear_color(1.0, 1.0, 1.0, 1.0);
         //self.gl.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
 
-        self.renderer.queue_text("Hello world ", &Font::new("Georgia", 10), 40., f);
+        self.renderer.queue_text("Hello world ", &Font::new("Georgia", 40), 40., f);
         self.renderer.draw();
         self.frame += 1;
 
