@@ -1,0 +1,22 @@
+[package]
+name = "font"
+version = "0.1.0"
+authors = ["Paul Butler <paulgb@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+webgl2-glyph-atlas = { path="../../" }
+wasm-bindgen = { git="https://github.com/rustwasm/wasm-bindgen.git" }
+web-sys = { git="https://github.com/rustwasm/wasm-bindgen.git", features = [
+    'Document',
+    'Element',
+    'HtmlElement',
+    'Node',
+    'Window',
+    'Performance',
+    'FontFace',
+    'FontFaceSet',
+] }
+wasm-bindgen-futures = { git="https://github.com/rustwasm/wasm-bindgen.git" }
