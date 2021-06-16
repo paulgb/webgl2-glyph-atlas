@@ -219,7 +219,7 @@ async function load(module, imports) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('index-21b139597ac296e2_bg.wasm', import.meta.url);
+        input = new URL('index-748ddda5da5aad83_bg.wasm', import.meta.url);
     }
     const imports = {};
     imports.wbg = {};
@@ -238,18 +238,12 @@ async function init(input) {
     imports.wbg.__wbg_bufferData_9129d14b1f0de925 = function(arg0, arg1, arg2, arg3) {
         getObject(arg0).bufferData(arg1 >>> 0, getObject(arg2), arg3 >>> 0);
     };
-    imports.wbg.__wbg_drawArraysInstanced_620da1e95142f82e = function(arg0, arg1, arg2, arg3, arg4) {
-        getObject(arg0).drawArraysInstanced(arg1 >>> 0, arg2, arg3, arg4);
-    };
     imports.wbg.__wbg_texImage2D_f2f58bd19976549f = function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6) {
         getObject(arg0).texImage2D(arg1 >>> 0, arg2, arg3, arg4 >>> 0, arg5 >>> 0, getObject(arg6));
     }, arguments) };
     imports.wbg.__wbg_texSubImage2D_3a0027af186b1921 = function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
         getObject(arg0).texSubImage2D(arg1 >>> 0, arg2, arg3, arg4, arg5 >>> 0, arg6 >>> 0, getObject(arg7));
     }, arguments) };
-    imports.wbg.__wbg_vertexAttribDivisor_520ef0dca9f7f41a = function(arg0, arg1, arg2) {
-        getObject(arg0).vertexAttribDivisor(arg1 >>> 0, arg2 >>> 0);
-    };
     imports.wbg.__wbg_attachShader_8a9eaf84fe954e03 = function(arg0, arg1, arg2) {
         getObject(arg0).attachShader(getObject(arg1), getObject(arg2));
     };
@@ -283,6 +277,9 @@ async function init(input) {
     imports.wbg.__wbg_createTexture_42e03addb914d25f = function(arg0) {
         var ret = getObject(arg0).createTexture();
         return isLikeNone(ret) ? 0 : addHeapObject(ret);
+    };
+    imports.wbg.__wbg_drawArrays_4903394bf95e8642 = function(arg0, arg1, arg2, arg3) {
+        getObject(arg0).drawArrays(arg1 >>> 0, arg2, arg3);
     };
     imports.wbg.__wbg_enable_f39af773aafb63f0 = function(arg0, arg1) {
         getObject(arg0).enable(arg1 >>> 0);
