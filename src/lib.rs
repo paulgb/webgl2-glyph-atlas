@@ -6,6 +6,7 @@ pub use crate::font::Font;
 use crate::glyph_atlas::GlyphAtlas;
 use crate::shader::{compile_shader, link_program};
 
+mod dom;
 mod error;
 mod font;
 mod glyph_atlas;

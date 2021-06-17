@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use wasm_bindgen::JsCast;
-use web_sys::{CanvasRenderingContext2d, Document, ImageData, TextMetrics, Window};
+use web_sys::{CanvasRenderingContext2d, ImageData, TextMetrics};
+use crate::dom::get_document;
 
 const TEXTURE_SIZE: u32 = 256;
 use crate::error::{GlyphAtlasError, Result};
@@ -41,17 +42,6 @@ pub struct GlyphAtlas {
     fonts: Vec<Font>, // TODO: ugh
     characters: HashMap<GlyphSpec, AtlasEntry>,
     needed: HashMap<GlyphSpec, GlyphShape>,
-}
-
-fn get_window() -> Result<Window> {
-    web_sys::window()
-        .ok_or_else(|| GlyphAtlasError::DomError("Could not access window global.".to_string()))
-}
-
-fn get_document() -> Result<Document> {
-    get_window()?
-        .document()
-        .ok_or_else(|| GlyphAtlasError::DomError("Cloud not access document.".to_string()))
 }
 
 impl GlyphAtlas {
