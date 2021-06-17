@@ -1,3 +1,4 @@
+use wasm_bindgen::JsValue;
 use web_sys::{WebGl2RenderingContext, WebGlBuffer, WebGlProgram, WebGlTexture};
 
 use crate::error::GlyphAtlasError;
@@ -17,6 +18,10 @@ macro_rules! console_log {
         web_sys::console::log_1(&wasm_bindgen::JsValue::from(
             format!($($x),+)));
     )
+}
+
+pub fn log_error(error: GlyphAtlasError) {
+    web_sys::console::error_1(&JsValue::from(format!("webgl2-glyph-atlas encountered an error: {:?}", error)));
 }
 
 pub struct Renderer<'a> {
@@ -46,7 +51,7 @@ impl<'a> Renderer<'a> {
         )?;
 
         let program = link_program(gl, &vert_shader, &frag_shader)?;
-        let atlas = GlyphAtlas::new();
+        let atlas = GlyphAtlas::new()?;
         let texture = gl.create_texture().ok_or_else(|| {
             GlyphAtlasError::WebGlError("Could not allocate texture.".to_string())
         })?;
@@ -58,7 +63,7 @@ impl<'a> Renderer<'a> {
             WebGl2RenderingContext::RGBA as i32,   // internalformat
             WebGl2RenderingContext::RGBA,          // format
             WebGl2RenderingContext::UNSIGNED_BYTE, // type
-            &atlas.image_data(),                   // data
+            &atlas.image_data()?,                  // data
         )
         .map_err(|_| GlyphAtlasError::WebGlError("Could not write to texture.".to_string()))?;
 
@@ -109,7 +114,7 @@ impl<'a> Renderer<'a> {
             .push((text.to_string(), font.clone(), x, y));
     }
 
-    pub fn draw(&mut self) {
+    pub fn draw(&mut self) -> Result<(), GlyphAtlasError> {
         self.quads.clear();
         let width = self.gl.drawing_buffer_width() as f32;
         let height = self.gl.drawing_buffer_height() as f32;
@@ -124,7 +129,7 @@ impl<'a> Renderer<'a> {
                 .collect(),
         );
 
-        if need_to_update_texture {
+        if need_to_update_texture? {
             self.gl
                 .tex_sub_image_2d_with_u32_and_u32_and_image_data(
                     WebGl2RenderingContext::TEXTURE_2D,    // target
@@ -133,9 +138,9 @@ impl<'a> Renderer<'a> {
                     0,                                     // yoffset
                     WebGl2RenderingContext::RGBA,          // format
                     WebGl2RenderingContext::UNSIGNED_BYTE, // type
-                    &self.atlas.image_data(),              // data
+                    &self.atlas.image_data()?,             // data
                 )
-                .unwrap();
+                .map_err(|_| GlyphAtlasError::WebGlError("Could not update texture.".to_string()))?
         }
 
         let x_scale = 2. / width;
@@ -148,7 +153,7 @@ impl<'a> Renderer<'a> {
             let mut x = x;
 
             for ch in chars {
-                let entry = self.atlas.get_entry(ch, &font);
+                let entry = self.atlas.get_entry(ch, &font)?;
 
                 let (tex_upper_left, tex_lower_right) = entry.texture_scaled_bounds();
 
@@ -197,7 +202,7 @@ impl<'a> Renderer<'a> {
             (self.quads.len() * 6) as i32,
         );
 
-        self.gl.finish();
+        Ok(())
     }
 }
 

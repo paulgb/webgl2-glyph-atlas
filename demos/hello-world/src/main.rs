@@ -23,7 +23,7 @@ pub fn main() -> Result<(), JsValue> {
     renderer.queue_text("Hello, world! 🌎", &Font::new("Arial", 30), 10., 200.);
     renderer.queue_text("こんにちは世界", &Font::new("Helvetica", 25), 10., 10.);
 
-    renderer.draw();
+    renderer.draw().unwrap();
 
     Ok(())
 }

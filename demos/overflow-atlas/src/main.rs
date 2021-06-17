@@ -2,7 +2,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::WebGl2RenderingContext;
 
-use webgl2_glyph_atlas::{Font, Renderer};
+use webgl2_glyph_atlas::{Font, Renderer, log_error};
 
 pub fn main() -> Result<(), JsValue> {
     let document = web_sys::window().unwrap().document().unwrap();
@@ -29,7 +29,7 @@ pub fn main() -> Result<(), JsValue> {
     renderer.queue_text("Hello world", &Font::new("Georgia", 70), 40., 200.);
     renderer.queue_text("Hello world", &Font::new("Georgia", 75), 40., 200.);
     
-    renderer.draw();
+    let _ = renderer.draw().map_err(log_error);
 
     Ok(())
 }

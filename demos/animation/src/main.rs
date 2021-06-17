@@ -40,7 +40,7 @@ impl RenderContext {
         //self.gl.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
 
         self.renderer.queue_text("Hello world ", &Font::new("Georgia", 40), 40., f);
-        self.renderer.draw();
+        self.renderer.draw().unwrap();
         self.frame += 1;
 
         let end_time = web_sys::window().unwrap().performance().unwrap().now();

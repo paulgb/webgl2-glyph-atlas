@@ -32,7 +32,7 @@ async fn draw_text() {
 
     renderer.queue_text("Hello world ", &Font::new("Pacifico", 40), 10., 120.);
 
-    renderer.draw();
+    renderer.draw().unwrap();
 }
 
 pub fn main() {
