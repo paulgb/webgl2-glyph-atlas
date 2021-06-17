@@ -22,7 +22,7 @@ struct RenderContext {
 impl RenderContext {
     pub fn new(gl: WebGl2RenderingContext) -> RenderContext {
         let gl = Box::leak(Box::new(gl));
-        let renderer = Renderer::new(gl);
+        let renderer = Renderer::new(gl).unwrap();
         
         RenderContext {
             _gl: gl,
@@ -70,9 +70,7 @@ pub fn main() {
 
     let mut renderer = RenderContext::new(gl);
 
-
     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
-        
         renderer.render();
 
         let window = web_sys::window().unwrap();

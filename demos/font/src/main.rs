@@ -24,7 +24,7 @@ async fn draw_text() {
         .unwrap()
         .dyn_into::<WebGl2RenderingContext>().unwrap();
 
-    let mut renderer = Renderer::new(&gl);
+    let mut renderer = Renderer::new(&gl).unwrap();
 
     gl.blend_func(WebGl2RenderingContext::ONE, WebGl2RenderingContext::ONE_MINUS_SRC_ALPHA);
     gl.clear_color(1.0, 1.0, 1.0, 1.0);

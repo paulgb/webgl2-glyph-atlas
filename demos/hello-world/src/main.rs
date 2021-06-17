@@ -14,7 +14,7 @@ pub fn main() -> Result<(), JsValue> {
         .unwrap()
         .dyn_into::<WebGl2RenderingContext>()?;
 
-    let mut renderer = Renderer::new(&gl);
+    let mut renderer = Renderer::new(&gl).unwrap();
 
     gl.clear_color(1.0, 1.0, 1.0, 1.0);
     gl.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);

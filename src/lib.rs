@@ -1,11 +1,15 @@
-use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlTexture, WebGlBuffer};
+use web_sys::{WebGl2RenderingContext, WebGlBuffer, WebGlProgram, WebGlTexture};
 
+use crate::error::GlyphAtlasError;
 use crate::glyph_atlas::GlyphAtlas;
 use crate::shader::{compile_shader, link_program};
+pub use crate::font::Font;
 
+mod error;
 mod glyph_atlas;
 mod packing;
 pub mod shader;
+mod font;
 
 #[allow(unused)]
 macro_rules! console_log {
@@ -26,26 +30,26 @@ pub struct Renderer<'a> {
 }
 
 impl<'a> Renderer<'a> {
-    pub fn new(gl: &WebGl2RenderingContext) -> Renderer {
+    pub fn new(gl: &WebGl2RenderingContext) -> Result<Renderer, GlyphAtlasError> {
         gl.enable(WebGl2RenderingContext::BLEND);
 
         let vert_shader = compile_shader(
             gl,
             WebGl2RenderingContext::VERTEX_SHADER,
             include_str!("shader.vert"),
-        )
-        .unwrap();
+        )?;
 
         let frag_shader = compile_shader(
             gl,
             WebGl2RenderingContext::FRAGMENT_SHADER,
             include_str!("shader.frag"),
-        )
-        .unwrap();
+        )?;
 
-        let program = link_program(gl, &vert_shader, &frag_shader).unwrap();
+        let program = link_program(gl, &vert_shader, &frag_shader)?;
         let atlas = GlyphAtlas::new();
-        let texture = gl.create_texture().unwrap();
+        let texture = gl.create_texture().ok_or_else(|| {
+            GlyphAtlasError::WebGlError("Could not allocate texture.".to_string())
+        })?;
 
         gl.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture));
         gl.tex_image_2d_with_u32_and_u32_and_image_data(
@@ -55,12 +59,15 @@ impl<'a> Renderer<'a> {
             WebGl2RenderingContext::RGBA,          // format
             WebGl2RenderingContext::UNSIGNED_BYTE, // type
             &atlas.image_data(),                   // data
-        ).unwrap();
+        )
+        .map_err(|_| GlyphAtlasError::WebGlError("Could not write to texture.".to_string()))?;
 
-        let buffer = gl.create_buffer().unwrap();
+        let buffer = gl.create_buffer().ok_or_else(|| {
+            GlyphAtlasError::WebGlError("Could not create vertex buffer.".to_string())
+        })?;
         let quads = Vec::new();
 
-        Renderer {
+        Ok(Renderer {
             gl,
             program,
             atlas,
@@ -68,7 +75,7 @@ impl<'a> Renderer<'a> {
             texture,
             buffer,
             quads,
-        }
+        })
     }
 
     fn bind_texture(&mut self) {
@@ -172,20 +179,23 @@ impl<'a> Renderer<'a> {
         self.gl
             .bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&self.buffer));
 
-            unsafe {
-                let vert_array = js_sys::Float32Array::view(&bytemuck::cast_slice(&self.quads));
+        unsafe {
+            let vert_array = js_sys::Float32Array::view(&bytemuck::cast_slice(&self.quads));
 
-                self.gl.buffer_data_with_array_buffer_view(
-                    WebGl2RenderingContext::ARRAY_BUFFER,
-                    &vert_array,
-                    WebGl2RenderingContext::DYNAMIC_DRAW,
-                );
-            }
+            self.gl.buffer_data_with_array_buffer_view(
+                WebGl2RenderingContext::ARRAY_BUFFER,
+                &vert_array,
+                WebGl2RenderingContext::DYNAMIC_DRAW,
+            );
+        }
 
         BlitVertex::describe(self.gl, &self.program);
 
-        self.gl
-            .draw_arrays(WebGl2RenderingContext::TRIANGLES, 0, (self.quads.len() * 6) as i32);
+        self.gl.draw_arrays(
+            WebGl2RenderingContext::TRIANGLES,
+            0,
+            (self.quads.len() * 6) as i32,
+        );
 
         self.gl.finish();
     }
@@ -198,7 +208,12 @@ struct BlitQuad {
 }
 
 impl BlitQuad {
-    pub fn new(upper_left: [f32; 2], lower_right: [f32; 2], tex_upper_left: [f32; 2], tex_lower_right: [f32; 2]) -> BlitQuad {
+    pub fn new(
+        upper_left: [f32; 2],
+        lower_right: [f32; 2],
+        tex_upper_left: [f32; 2],
+        tex_lower_right: [f32; 2],
+    ) -> BlitQuad {
         let upper_right = [lower_right[0], upper_left[1]];
         let lower_left = [upper_left[0], lower_right[1]];
         let tex_upper_right = [tex_lower_right[0], tex_upper_left[1]];
@@ -208,29 +223,29 @@ impl BlitQuad {
             vertices: [
                 BlitVertex {
                     position: upper_left,
-                    tex_coord: tex_upper_left
+                    tex_coord: tex_upper_left,
                 },
                 BlitVertex {
                     position: upper_right,
-                    tex_coord: tex_upper_right
+                    tex_coord: tex_upper_right,
                 },
                 BlitVertex {
                     position: lower_left,
-                    tex_coord: tex_lower_left
+                    tex_coord: tex_lower_left,
                 },
                 BlitVertex {
                     position: upper_right,
-                    tex_coord: tex_upper_right
+                    tex_coord: tex_upper_right,
                 },
                 BlitVertex {
                     position: lower_right,
-                    tex_coord: tex_lower_right
+                    tex_coord: tex_lower_right,
                 },
                 BlitVertex {
                     position: lower_left,
-                    tex_coord: tex_lower_left
+                    tex_coord: tex_lower_left,
                 },
-            ]
+            ],
         }
     }
 }
@@ -247,10 +262,7 @@ impl BlitVertex {
         let mut offset = 0;
 
         // Binding is simple because each attribute happens to be a [f32; 2].
-        for attribute in &[
-            "a_position",
-            "a_tex_coord",
-        ] {
+        for attribute in &["a_position", "a_tex_coord"] {
             let location = gl.get_attrib_location(&program, attribute) as u32;
             gl.vertex_attrib_pointer_with_i32(
                 location,
@@ -263,25 +275,6 @@ impl BlitVertex {
             gl.enable_vertex_attrib_array(location);
 
             offset += std::mem::size_of::<[f32; 2]>() as i32;
-        }
-    }
-}
-
-#[derive(Hash, PartialEq, Eq, Clone)]
-pub struct Font {
-    name: String,
-    size: u8,
-}
-
-impl Font {
-    pub fn as_canvas_string(&self) -> String {
-        format!("{}px {}", self.size, self.name)
-    }
-
-    pub fn new(name: &str, size: u8) -> Self {
-        Font {
-            name: name.to_string(),
-            size,
         }
     }
 }
