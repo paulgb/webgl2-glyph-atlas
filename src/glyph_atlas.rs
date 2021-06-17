@@ -44,11 +44,14 @@ pub struct GlyphAtlas {
 }
 
 fn get_window() -> Result<Window> {
-    web_sys::window().ok_or_else(|| GlyphAtlasError::DomError("Could not access window global.".to_string()))
+    web_sys::window()
+        .ok_or_else(|| GlyphAtlasError::DomError("Could not access window global.".to_string()))
 }
 
 fn get_document() -> Result<Document> {
-    get_window()?.document().ok_or_else(|| GlyphAtlasError::DomError("Cloud not access document.".to_string()))
+    get_window()?
+        .document()
+        .ok_or_else(|| GlyphAtlasError::DomError("Cloud not access document.".to_string()))
 }
 
 impl GlyphAtlas {
@@ -57,7 +60,9 @@ impl GlyphAtlas {
 
         let canvas = document
             .create_element("canvas")
-            .map_err(|_| GlyphAtlasError::DomError("Could not construct canvas element.".to_string()))?
+            .map_err(|_| {
+                GlyphAtlasError::DomError("Could not construct canvas element.".to_string())
+            })?
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .map_err(|_| GlyphAtlasError::DomError("Could not cast canvas element.".to_string()))?;
 
@@ -82,7 +87,11 @@ impl GlyphAtlas {
         let canvas_context = canvas
             .get_context("2d")
             .map_err(|_| GlyphAtlasError::DomError("Could not get context.".to_string()))?
-            .ok_or_else(|| GlyphAtlasError::DomError("A non-2D context has already been requested from this canvas.".to_string()))?
+            .ok_or_else(|| {
+                GlyphAtlasError::DomError(
+                    "A non-2D context has already been requested from this canvas.".to_string(),
+                )
+            })?
             .dyn_into::<CanvasRenderingContext2d>()
             .map_err(|_| GlyphAtlasError::DomError("Could not cast canvas context.".to_string()))?;
 
@@ -101,7 +110,11 @@ impl GlyphAtlas {
     pub fn image_data(&self) -> Result<ImageData> {
         self.canvas_context
             .get_image_data(0., 0., TEXTURE_SIZE as f64, TEXTURE_SIZE as f64)
-            .map_err(|_| GlyphAtlasError::DomError("Could not get image data from canvas context.".to_string()))
+            .map_err(|_| {
+                GlyphAtlasError::DomError(
+                    "Could not get image data from canvas context.".to_string(),
+                )
+            })
     }
 
     fn font_to_index(&mut self, font: &Font) -> usize {
@@ -127,7 +140,10 @@ impl GlyphAtlas {
                 let key = GlyphSpec(ch, font_idx);
                 if !self.characters.contains_key(&key) && !self.needed.contains_key(&key) {
                     let st: String = ch.to_string();
-                    let metrics: TextMetrics = self.canvas_context.measure_text(&st).map_err(|_| GlyphAtlasError::DomError("Could not measure text.".to_string()))?;
+                    let metrics: TextMetrics =
+                        self.canvas_context.measure_text(&st).map_err(|_| {
+                            GlyphAtlasError::DomError("Could not measure text.".to_string())
+                        })?;
 
                     let glyph_shape = GlyphShape::from_text_metrics(&metrics);
 
@@ -147,8 +163,9 @@ impl GlyphAtlas {
         for (GlyphSpec(ch, font_id), glyph_shape) in needed.into_iter() {
             let size = glyph_shape.size();
 
-            let (x, y) = self.packing.insert_rect(size)
-                .ok_or_else(|| GlyphAtlasError::InternalError("Ran out of space to pack rect.".to_string()))?;
+            let (x, y) = self.packing.insert_rect(size).ok_or_else(|| {
+                GlyphAtlasError::InternalError("Ran out of space to pack rect.".to_string())
+            })?;
 
             // For debugging. TODO: feature-gate this?
             /*
@@ -168,7 +185,9 @@ impl GlyphAtlas {
 
             self.canvas_context
                 .fill_text(&ch.to_string(), x as f64, (y + glyph_shape.ascent) as f64)
-                .map_err(|_| GlyphAtlasError::DomError("Could render text to canvas context.".to_string()))?;
+                .map_err(|_| {
+                    GlyphAtlasError::DomError("Could render text to canvas context.".to_string())
+                })?;
 
             self.canvas_context.restore();
 
@@ -185,8 +204,19 @@ impl GlyphAtlas {
     }
 
     pub fn get_entry(&self, c: char, font: &Font) -> Result<&AtlasEntry> {
-        let font_idx: FontIndex = *self.font_to_index.get(font).ok_or_else(|| GlyphAtlasError::InternalError("Attempted to render font that is not in index.".to_string()))?;
-        let ch = self.characters.get(&GlyphSpec(c, font_idx)).ok_or_else(|| GlyphAtlasError::InternalError("Attempted to render glyph that is not in index.".to_string()))?;
+        let font_idx: FontIndex = *self.font_to_index.get(font).ok_or_else(|| {
+            GlyphAtlasError::InternalError(
+                "Attempted to render font that is not in index.".to_string(),
+            )
+        })?;
+        let ch = self
+            .characters
+            .get(&GlyphSpec(c, font_idx))
+            .ok_or_else(|| {
+                GlyphAtlasError::InternalError(
+                    "Attempted to render glyph that is not in index.".to_string(),
+                )
+            })?;
 
         Ok(ch)
     }

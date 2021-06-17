@@ -2,15 +2,15 @@ use wasm_bindgen::JsValue;
 use web_sys::{WebGl2RenderingContext, WebGlBuffer, WebGlProgram, WebGlTexture};
 
 use crate::error::GlyphAtlasError;
+pub use crate::font::Font;
 use crate::glyph_atlas::GlyphAtlas;
 use crate::shader::{compile_shader, link_program};
-pub use crate::font::Font;
 
 mod error;
+mod font;
 mod glyph_atlas;
 mod packing;
 pub mod shader;
-mod font;
 
 #[allow(unused)]
 macro_rules! console_log {
@@ -21,7 +21,10 @@ macro_rules! console_log {
 }
 
 pub fn log_error(error: GlyphAtlasError) {
-    web_sys::console::error_1(&JsValue::from(format!("webgl2-glyph-atlas encountered an error: {:?}", error)));
+    web_sys::console::error_1(&JsValue::from(format!(
+        "webgl2-glyph-atlas encountered an error: {:?}",
+        error
+    )));
 }
 
 pub struct Renderer<'a> {

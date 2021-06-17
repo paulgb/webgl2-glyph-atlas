@@ -2,7 +2,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::WebGl2RenderingContext;
 
-use webgl2_glyph_atlas::{Font, Renderer, log_error};
+use webgl2_glyph_atlas::{log_error, Font, Renderer};
 
 pub fn main() -> Result<(), JsValue> {
     let document = web_sys::window().unwrap().document().unwrap();
@@ -15,7 +15,10 @@ pub fn main() -> Result<(), JsValue> {
         .dyn_into::<WebGl2RenderingContext>()?;
 
     let mut renderer = Renderer::new(&gl).unwrap();
-    gl.blend_func(WebGl2RenderingContext::ONE, WebGl2RenderingContext::ONE_MINUS_SRC_ALPHA);
+    gl.blend_func(
+        WebGl2RenderingContext::ONE,
+        WebGl2RenderingContext::ONE_MINUS_SRC_ALPHA,
+    );
 
     gl.clear_color(1.0, 1.0, 1.0, 1.0);
     gl.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
@@ -28,7 +31,7 @@ pub fn main() -> Result<(), JsValue> {
     renderer.queue_text("Hello world", &Font::new("Georgia", 65), 40., 200.);
     renderer.queue_text("Hello world", &Font::new("Georgia", 70), 40., 200.);
     renderer.queue_text("Hello world", &Font::new("Georgia", 75), 40., 200.);
-    
+
     let _ = renderer.draw().map_err(log_error);
 
     Ok(())
