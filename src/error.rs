@@ -25,3 +25,5 @@ impl std::fmt::Debug for GlyphAtlasError {
 }
 
 pub type Result<T> = std::result::Result<T, GlyphAtlasError>;
+
+impl std::error::Error for GlyphAtlasError {}
